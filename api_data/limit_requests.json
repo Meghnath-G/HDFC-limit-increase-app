@@ -1,0 +1,17 @@
+[
+  {
+    "id": "2e595679-c300-413c-90b0-98b9ab70dc55",
+    "customer_id": "CUST001",
+    "customer_name": "mefgn ghorai",
+    "email": "john.doe@hdfc.com",
+    "phone": "+91-9876543210",
+    "request_type": "limit_increase",
+    "current_limit": 50000,
+    "requested_limit": 1000000,
+    "reason": "Salary increase and improved credit score. Need higher limit for business expenses.",
+    "income_proof": "demo_salary_slip.pdf",
+    "status": "pending",
+    "request_date": "2025-09-19T05:26:57.361518",
+    "last_updated": "2025-09-19T05:26:57.361544"
+  }
+]

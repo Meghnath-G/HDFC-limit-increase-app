@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HDFC Card Limit System - Live Database Monitor</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        .card h3 {
+            margin-top: 0;
+            color: #FFD700;
+            border-bottom: 2px solid #FFD700;
+            padding-bottom: 10px;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .data-table th, .data-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .data-table th {
+            background: rgba(255, 255, 255, 0.1);
+            font-weight: bold;
+        }
+        .status-pending { color: #FFA500; }
+        .status-approved { color: #00FF00; }
+        .status-rejected { color: #FF6B6B; }
+        .refresh-btn {
+            background: #FFD700;
+            color: #333;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 10px 5px;
+            transition: transform 0.2s;
+        }
+        .refresh-btn:hover {
+            transform: scale(1.05);
+        }
+        .demo-form {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .form-group label {
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+        }
+        .submit-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .submit-btn:hover {
+            background: #45a049;
+        }
+        .log {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+        }
+        .connected { background: #4CAF50; }
+        .disconnected { background: #FF6B6B; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏦 HDFC Card Limit System - Live Database Monitor</h1>
+        
+        <div id="connectionStatus" class="connection-status disconnected">
+            ❌ Server Offline
+        </div>
+
+        <!-- Demo Form -->
+        <div class="card">
+            <h3>📝 Submit Test Data (Live Demo)</h3>
+            <form id="demoForm" class="demo-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="customerName">Customer Name:</label>
+                        <input type="text" id="customerName" value="John Doe" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="customerEmail">Email:</label>
+                        <input type="email" id="customerEmail" value="john.doe@hdfc.com" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="customerPhone">Phone:</label>
+                        <input type="tel" id="customerPhone" value="+91-9876543210" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="customerId">Customer ID:</label>
+                        <input type="text" id="customerId" value="CUST001" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="currentLimit">Current Limit (₹):</label>
+                        <input type="number" id="currentLimit" value="50000" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="requestedLimit">Requested Limit (₹):</label>
+                        <input type="number" id="requestedLimit" value="100000" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="reason">Reason for Increase:</label>
+                    <textarea id="reason" rows="3" required>Salary increase and improved credit score. Need higher limit for business expenses.</textarea>
+                </div>
+                <button type="submit" class="submit-btn">🚀 Submit Limit Request (Live Demo)</button>
+            </form>
+        </div>
+
+        <!-- Dashboard -->
+        <div class="dashboard">
+            <!-- Recent Requests -->
+            <div class="card">
+                <h3>📊 Recent Limit Requests</h3>
+                <button class="refresh-btn" onclick="loadRecentRequests()">🔄 Refresh</button>
+                <div id="recentRequests">
+                    <p>Loading...</p>
+                </div>
+            </div>
+
+            <!-- Customers -->
+            <div class="card">
+                <h3>👥 Customer Database</h3>
+                <button class="refresh-btn" onclick="loadCustomers()">🔄 Refresh</button>
+                <div id="customers">
+                    <p>Loading...</p>
+                </div>
+            </div>
+
+            <!-- System Stats -->
+            <div class="card">
+                <h3>📈 Live Statistics</h3>
+                <button class="refresh-btn" onclick="loadStats()">🔄 Refresh</button>
+                <div id="stats">
+                    <p>Loading...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activity Log -->
+        <div class="card">
+            <h3>📝 Live Activity Log</h3>
+            <button class="refresh-btn" onclick="clearLog()">🗑️ Clear Log</button>
+            <div id="activityLog" class="log">
+                System started. Waiting for data...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+        let logEntries = [];
+
+        function addLogEntry(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            logEntries.push(`[${timestamp}] ${message}`);
+            if (logEntries.length > 50) logEntries.shift();
+            document.getElementById('activityLog').innerHTML = logEntries.join('\n');
+            document.getElementById('activityLog').scrollTop = document.getElementById('activityLog').scrollHeight;
+        }
+
+        function clearLog() {
+            logEntries = [];
+            document.getElementById('activityLog').innerHTML = 'Log cleared.';
+        }
+
+        async function checkServerStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/health/`);
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('connectionStatus').className = 'connection-status connected';
+                    document.getElementById('connectionStatus').textContent = '✅ Server Online';
+                    addLogEntry('✅ Server connection established');
+                    return true;
+                }
+            } catch (error) {
+                document.getElementById('connectionStatus').className = 'connection-status disconnected';
+                document.getElementById('connectionStatus').textContent = '❌ Server Offline';
+                return false;
+            }
+        }
+
+        async function loadRecentRequests() {
+            try {
+                const response = await fetch(`${API_BASE}/limit-requests/recent/`);
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.data.length > 0) {
+                    let html = '<table class="data-table"><tr><th>ID</th><th>Customer</th><th>Current</th><th>Requested</th><th>Status</th><th>Date</th></tr>';
+                    data.data.forEach(req => {
+                        const statusClass = `status-${req.status}`;
+                        const shortId = req.id.substring(0, 8);
+                        const date = new Date(req.request_date).toLocaleString();
+                        html += `<tr>
+                            <td>${shortId}...</td>
+                            <td>${req.customer_name}</td>
+                            <td>₹${req.current_limit.toLocaleString()}</td>
+                            <td>₹${req.requested_limit.toLocaleString()}</td>
+                            <td class="${statusClass}">${req.status.toUpperCase()}</td>
+                            <td>${date}</td>
+                        </tr>`;
+                    });
+                    html += '</table>';
+                    document.getElementById('recentRequests').innerHTML = html;
+                    addLogEntry(`📊 Loaded ${data.data.length} recent requests`);
+                } else {
+                    document.getElementById('recentRequests').innerHTML = '<p>No requests found. Submit a test request above!</p>';
+                }
+            } catch (error) {
+                document.getElementById('recentRequests').innerHTML = '<p>❌ Failed to load requests</p>';
+                addLogEntry(`❌ Failed to load requests: ${error.message}`);
+            }
+        }
+
+        async function loadCustomers() {
+            try {
+                const response = await fetch(`${API_BASE}/customers/`);
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.data.length > 0) {
+                    let html = '<table class="data-table"><tr><th>Name</th><th>Email</th><th>Customer ID</th><th>Status</th></tr>';
+                    data.data.forEach(customer => {
+                        html += `<tr>
+                            <td>${customer.name}</td>
+                            <td>${customer.email}</td>
+                            <td>${customer.customer_id}</td>
+                            <td class="status-${customer.status}">${customer.status.toUpperCase()}</td>
+                        </tr>`;
+                    });
+                    html += '</table>';
+                    document.getElementById('customers').innerHTML = html;
+                    addLogEntry(`👥 Loaded ${data.data.length} customers`);
+                } else {
+                    document.getElementById('customers').innerHTML = '<p>No customers found. Submit a test request above!</p>';
+                }
+            } catch (error) {
+                document.getElementById('customers').innerHTML = '<p>❌ Failed to load customers</p>';
+                addLogEntry(`❌ Failed to load customers: ${error.message}`);
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const [requestsResponse, customersResponse] = await Promise.all([
+                    fetch(`${API_BASE}/limit-requests/recent/`),
+                    fetch(`${API_BASE}/customers/`)
+                ]);
+                
+                const requestsData = await requestsResponse.json();
+                const customersData = await customersResponse.json();
+                
+                const totalRequests = requestsData.data ? requestsData.data.length : 0;
+                const totalCustomers = customersData.data ? customersData.data.length : 0;
+                const pendingRequests = requestsData.data ? requestsData.data.filter(r => r.status === 'pending').length : 0;
+                
+                let html = `
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div style="text-align: center;">
+                            <h4 style="color: #FFD700; margin: 0;">Total Requests</h4>
+                            <div style="font-size: 2em; font-weight: bold;">${totalRequests}</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <h4 style="color: #FFD700; margin: 0;">Total Customers</h4>
+                            <div style="font-size: 2em; font-weight: bold;">${totalCustomers}</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <h4 style="color: #FFA500; margin: 0;">Pending Requests</h4>
+                            <div style="font-size: 2em; font-weight: bold;">${pendingRequests}</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <h4 style="color: #00FF00; margin: 0;">Success Rate</h4>
+                            <div style="font-size: 2em; font-weight: bold;">100%</div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('stats').innerHTML = html;
+                addLogEntry(`📈 Stats updated: ${totalRequests} requests, ${totalCustomers} customers`);
+            } catch (error) {
+                document.getElementById('stats').innerHTML = '<p>❌ Failed to load stats</p>';
+                addLogEntry(`❌ Failed to load stats: ${error.message}`);
+            }
+        }
+
+        // Form submission
+        document.getElementById('demoForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                customer_id: document.getElementById('customerId').value,
+                customer_name: document.getElementById('customerName').value,
+                email: document.getElementById('customerEmail').value,
+                phone: document.getElementById('customerPhone').value,
+                request_type: 'limit_increase',
+                current_limit: parseFloat(document.getElementById('currentLimit').value),
+                requested_limit: parseFloat(document.getElementById('requestedLimit').value),
+                reason: document.getElementById('reason').value,
+                income_proof: 'demo_salary_slip.pdf'
+            };
+
+            try {
+                addLogEntry(`🚀 Submitting request for ${formData.customer_name}...`);
+                
+                const response = await fetch(`${API_BASE}/limit-requests/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    addLogEntry(`✅ Request submitted successfully! ID: ${result.data.id.substring(0, 8)}...`);
+                    addLogEntry(`💰 Limit increase: ₹${formData.current_limit.toLocaleString()} → ₹${formData.requested_limit.toLocaleString()}`);
+                    
+                    // Auto-refresh data
+                    setTimeout(() => {
+                        loadRecentRequests();
+                        loadCustomers();
+                        loadStats();
+                    }, 500);
+                    
+                    // Generate new customer ID for next demo
+                    const newId = 'CUST' + String(Date.now()).substr(-3);
+                    document.getElementById('customerId').value = newId;
+                    
+                    alert('🎉 Request submitted successfully! Check the dashboard for live updates.');
+                } else {
+                    addLogEntry(`❌ Failed to submit request: ${result.message}`);
+                    alert('❌ Failed to submit request. Check the activity log for details.');
+                }
+            } catch (error) {
+                addLogEntry(`❌ Error submitting request: ${error.message}`);
+                alert('❌ Network error. Make sure the server is running on http://localhost:8000');
+            }
+        });
+
+        // Auto-refresh every 10 seconds
+        setInterval(() => {
+            checkServerStatus();
+            loadRecentRequests();
+            loadCustomers();
+            loadStats();
+        }, 10000);
+
+        // Initial load
+        checkServerStatus().then(connected => {
+            if (connected) {
+                loadRecentRequests();
+                loadCustomers();
+                loadStats();
+            }
+        });
+
+        addLogEntry('🔄 Live Database Monitor initialized');
+        addLogEntry('💡 Submit test data using the form above to see live updates');
+    </script>
+</body>
+</html>

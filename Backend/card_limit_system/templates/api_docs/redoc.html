@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - HDFC Bank</title>
+    <link rel="icon" type="image/png" href="https://www.hdfcbank.com/assets/images/common/logo.png" sizes="32x32" />
+    <script src="https://cdn.jsdelivr.net/npm/redoc@2.0.0/bundles/redoc.standalone.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        /* HDFC Header Styling */
+        .hdfc-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 9999;
+            background: linear-gradient(135deg, #004c97 0%, #00a651 100%);
+            color: white;
+            padding: 15px 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            border-bottom: 3px solid #00a651;
+        }
+        
+        .hdfc-header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .hdfc-logo-section {
+            display: flex;
+            align-items: center;
+        }
+        
+        .hdfc-logo {
+            height: 35px;
+            margin-right: 20px;
+        }
+        
+        .hdfc-title {
+            margin: 0;
+            font-size: 20px;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .hdfc-nav {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .hdfc-nav-item {
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 4px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .hdfc-nav-item:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: white;
+            text-decoration: none;
+            color: white;
+        }
+        
+        .hdfc-version {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        /* ReDoc Container Styling */
+        #redoc-container {
+            margin-top: 80px;
+            min-height: calc(100vh - 80px);
+        }
+        
+        /* Custom ReDoc theme overrides */
+        .redoc-wrap {
+            --color-primary: #004c97;
+            --color-primary-light: #336db7;
+            --color-success: #00a651;
+            --color-text: #333333;
+            --color-text-light: #666666;
+            --color-border: #e1e1e1;
+            --color-background: #ffffff;
+            --color-background-light: #f8f9fa;
+        }
+        
+        /* Menu styling */
+        .menu-content {
+            background-color: #fafafa !important;
+            border-right: 1px solid #e1e1e1 !important;
+        }
+        
+        .menu-item-header {
+            color: #004c97 !important;
+            font-weight: bold !important;
+        }
+        
+        .menu-item.active > .menu-item-header {
+            background-color: #004c97 !important;
+            color: white !important;
+        }
+        
+        /* API endpoint styling */
+        .http-verb.get {
+            background-color: #00a651 !important;
+        }
+        
+        .http-verb.post {
+            background-color: #004c97 !important;
+        }
+        
+        .http-verb.put {
+            background-color: #ff9500 !important;
+        }
+        
+        .http-verb.delete {
+            background-color: #e74c3c !important;
+        }
+        
+        /* Response example styling */
+        .response-samples {
+            background-color: #f8f9fa !important;
+            border: 1px solid #e1e1e1 !important;
+            border-radius: 4px !important;
+        }
+        
+        /* Security scheme styling */
+        .security-schemes {
+            background: linear-gradient(135deg, #004c97 0%, #00a651 100%) !important;
+            color: white !important;
+            padding: 20px !important;
+            border-radius: 8px !important;
+            margin: 20px 0 !important;
+        }
+        
+        /* Operation badge styling */
+        .operation-type {
+            background-color: #004c97 !important;
+            color: white !important;
+        }
+        
+        /* Custom alert styling */
+        .api-notice {
+            background: linear-gradient(135deg, #004c97 0%, #00a651 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .api-notice h3 {
+            margin: 0 0 15px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .api-notice p {
+            margin: 0 0 10px 0;
+            line-height: 1.5;
+        }
+        
+        .api-notice code {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .api-notice ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        
+        .api-notice li {
+            margin: 5px 0;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .hdfc-header {
+                padding: 10px 15px;
+            }
+            
+            .hdfc-header-content {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .hdfc-nav {
+                gap: 10px;
+            }
+            
+            .hdfc-nav-item {
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+            
+            #redoc-container {
+                margin-top: 120px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- HDFC Header -->
+    <div class="hdfc-header">
+        <div class="hdfc-header-content">
+            <div class="hdfc-logo-section">
+                <img src="https://www.hdfcbank.com/assets/images/common/logo.png" alt="HDFC Bank" class="hdfc-logo">
+                <h1 class="hdfc-title">{{ title }}</h1>
+            </div>
+            <div class="hdfc-nav">
+                <span class="hdfc-version">API Version: {{ version|default:"1.0.0" }}</span>
+                <a href="/api/v1/docs/" class="hdfc-nav-item">Swagger UI</a>
+                <a href="/api/v1/schema/" class="hdfc-nav-item">OpenAPI Schema</a>
+                <a href="/api/v1/health/" class="hdfc-nav-item">API Health</a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- API Notice Section -->
+    <div class="api-notice">
+        <h3>🏦 HDFC Card Limit Increase System API Documentation</h3>
+        <p>
+            <strong>Welcome to the comprehensive API documentation for HDFC Bank's Card Limit Increase System.</strong>
+            This documentation provides detailed information about all available endpoints, authentication methods, and integration guidelines.
+        </p>
+        <p><strong>Key Features:</strong></p>
+        <ul>
+            <li><strong>Banking-Grade Security:</strong> Firebase JWT authentication with PCI DSS compliance</li>
+            <li><strong>Multi-Channel OTP:</strong> SMS, Email, Voice, and WhatsApp verification</li>
+            <li><strong>Real-Time Processing:</strong> Instant limit request processing and status updates</li>
+            <li><strong>Comprehensive Tracking:</strong> Full audit trail and analytics</li>
+            <li><strong>Rate Protection:</strong> Built-in rate limiting and DDoS protection</li>
+        </ul>
+        <p><strong>Getting Started:</strong></p>
+        <ul>
+            <li>Review the authentication section below for token requirements</li>
+            <li>Check the <code>/api/v1/health/</code> endpoint to verify API connectivity</li>
+            <li>Start with customer registration and authentication flows</li>
+            <li>Use the Swagger UI for interactive testing and exploration</li>
+        </ul>
+        <p><strong>Support:</strong> For technical support, contact <code>api-support@hdfc.com</code></p>
+    </div>
+    
+    <!-- ReDoc Container -->
+    <div id="redoc-container"></div>
+    
+    <script>
+        // Initialize ReDoc with custom configuration
+        Redoc.init(
+            '{{ schema_url }}',
+            {
+                // Theme configuration
+                theme: {
+                    colors: {
+                        primary: {
+                            main: '#004c97',
+                            light: '#336db7',
+                            dark: '#003366'
+                        },
+                        success: {
+                            main: '#00a651',
+                            light: '#33b973',
+                            dark: '#007a3d'
+                        },
+                        text: {
+                            primary: '#333333',
+                            secondary: '#666666'
+                        },
+                        border: {
+                            dark: '#e1e1e1',
+                            light: '#f0f0f0'
+                        },
+                        responses: {
+                            success: {
+                                color: '#00a651',
+                                backgroundColor: '#f0f9f4'
+                            },
+                            error: {
+                                color: '#e74c3c',
+                                backgroundColor: '#fef5f5'
+                            },
+                            redirect: {
+                                color: '#ff9500',
+                                backgroundColor: '#fffbf0'
+                            },
+                            info: {
+                                color: '#004c97',
+                                backgroundColor: '#f0f4f9'
+                            }
+                        }
+                    },
+                    typography: {
+                        fontSize: '14px',
+                        lineHeight: '1.5em',
+                        code: {
+                            fontSize: '13px',
+                            fontFamily: '"Courier New", Courier, monospace',
+                            color: '#333333',
+                            backgroundColor: '#f8f9fa',
+                            wrap: false
+                        },
+                        headings: {
+                            fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif',
+                            fontWeight: 'bold'
+                        },
+                        links: {
+                            color: '#004c97',
+                            visited: '#663399',
+                            hover: '#00a651'
+                        }
+                    },
+                    sidebar: {
+                        backgroundColor: '#fafafa',
+                        width: '300px',
+                        textColor: '#333333'
+                    },
+                    rightPanel: {
+                        backgroundColor: '#263238',
+                        width: '40%',
+                        textColor: '#ffffff'
+                    }
+                },
+                
+                // Display options
+                scrollYOffset: 80,
+                hideDownloadButton: false,
+                disableSearch: false,
+                expandDefaultServerVariables: true,
+                expandResponses: '200,201',
+                hideHostname: false,
+                hideLoading: false,
+                hideSingleRequestSampleTab: false,
+                menuToggle: true,
+                nativeScrollbars: true,
+                pathInMiddlePanel: true,
+                requiredPropsFirst: true,
+                showExtensions: true,
+                sortPropsAlphabetically: true,
+                untrustedSpec: false,
+                
+                // Custom options
+                hideSchemaPattern: false,
+                expandSingleSchemaField: true,
+                schemaExpansionLevel: 2,
+                jsonSampleExpandLevel: 3,
+                
+                // Security
+                noAutoAuth: false,
+                
+                // Custom styling
+                options: {
+                    theme: {
+                        colors: {
+                            primary: {
+                                main: '#004c97'
+                            },
+                            success: {
+                                main: '#00a651'
+                            }
+                        }
+                    }
+                }
+            },
+            document.getElementById('redoc-container')
+        );
+        
+        // Add custom functionality after ReDoc loads
+        setTimeout(function() {
+            addCustomEnhancements();
+        }, 2000);
+        
+        function addCustomEnhancements() {
+            // Add custom search enhancement
+            const searchBox = document.querySelector('input[placeholder*="Search"]');
+            if (searchBox) {
+                searchBox.placeholder = 'Search HDFC API endpoints...';
+                searchBox.style.borderColor = '#004c97';
+            }
+            
+            // Add custom header to menu
+            const menuContent = document.querySelector('.menu-content');
+            if (menuContent && !document.querySelector('.custom-menu-header')) {
+                const header = document.createElement('div');
+                header.className = 'custom-menu-header';
+                header.innerHTML = `
+                    <div style="padding: 20px; background: linear-gradient(135deg, #004c97 0%, #00a651 100%); color: white; margin: -20px -20px 20px -20px;">
+                        <h3 style="margin: 0; font-size: 16px;">API Navigation</h3>
+                        <p style="margin: 5px 0 0 0; font-size: 12px; opacity: 0.9;">Browse all available endpoints</p>
+                    </div>
+                `;
+                menuContent.insertBefore(header, menuContent.firstChild);
+            }
+            
+            // Enhance operation panels
+            const operations = document.querySelectorAll('[data-section-id]');
+            operations.forEach(operation => {
+                const badge = operation.querySelector('.http-verb');
+                if (badge) {
+                    badge.style.fontWeight = 'bold';
+                    badge.style.textTransform = 'uppercase';
+                    badge.style.letterSpacing = '0.5px';
+                }
+            });
+            
+            // Add copy-to-clipboard functionality for code samples
+            const codeBlocks = document.querySelectorAll('pre code');
+            codeBlocks.forEach(block => {
+                if (!block.parentNode.querySelector('.copy-button')) {
+                    const copyBtn = document.createElement('button');
+                    copyBtn.className = 'copy-button';
+                    copyBtn.innerHTML = '📋 Copy';
+                    copyBtn.style.cssText = `
+                        position: absolute;
+                        top: 10px;
+                        right: 10px;
+                        background: #004c97;
+                        color: white;
+                        border: none;
+                        padding: 5px 10px;
+                        border-radius: 3px;
+                        cursor: pointer;
+                        font-size: 12px;
+                        z-index: 1000;
+                    `;
+                    
+                    copyBtn.onclick = function() {
+                        navigator.clipboard.writeText(block.textContent).then(() => {
+                            copyBtn.innerHTML = '✓ Copied';
+                            setTimeout(() => {
+                                copyBtn.innerHTML = '📋 Copy';
+                            }, 2000);
+                        });
+                    };
+                    
+                    block.parentNode.style.position = 'relative';
+                    block.parentNode.appendChild(copyBtn);
+                }
+            });
+        }
+        
+        // Custom notification system
+        window.showNotification = function(message, type) {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 90px;
+                right: 20px;
+                z-index: 10000;
+                padding: 15px 20px;
+                border-radius: 6px;
+                background: ${type === 'error' ? '#f8d7da' : type === 'warning' ? '#fff3cd' : '#d4edda'};
+                color: ${type === 'error' ? '#721c24' : type === 'warning' ? '#856404' : '#155724'};
+                border: 1px solid ${type === 'error' ? '#f5c6cb' : type === 'warning' ? '#ffeaa7' : '#c3e6cb'};
+                max-width: 350px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+                font-size: 14px;
+                animation: slideIn 0.3s ease-out;
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.style.animation = 'slideOut 0.3s ease-in';
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.parentNode.removeChild(notification);
+                        }
+                    }, 300);
+                }
+            }, 5000);
+        };
+        
+        // Add animation styles
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

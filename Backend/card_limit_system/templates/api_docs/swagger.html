@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - HDFC Bank</title>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@4.15.5/swagger-ui.css" />
+    <link rel="icon" type="image/png" href="https://www.hdfcbank.com/assets/images/common/logo.png" sizes="32x32" />
+    <style>
+        {{ css_content }}
+    </style>
+</head>
+<body>
+    <div id="swagger-ui"></div>
+    
+    <!-- Custom HDFC Header -->
+    <div class="hdfc-header" style="position: fixed; top: 0; left: 0; right: 0; z-index: 9999; background: linear-gradient(135deg, #004c97 0%, #00a651 100%); color: white; padding: 10px 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center;">
+                <img src="https://www.hdfcbank.com/assets/images/common/logo.png" alt="HDFC Bank" style="height: 30px; margin-right: 15px;">
+                <h1 style="margin: 0; font-size: 18px; font-weight: bold;">{{ title }}</h1>
+            </div>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <span style="font-size: 14px;">API Version: {{ version }}</span>
+                <a href="/api/v1/redoc/" style="color: white; text-decoration: none; padding: 5px 10px; border: 1px solid white; border-radius: 3px; font-size: 12px;">ReDoc View</a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add top margin to account for fixed header -->
+    <style>
+        body {
+            margin-top: 60px !important;
+        }
+    </style>
+
+    <script src="https://unpkg.com/swagger-ui-dist@4.15.5/swagger-ui-bundle.js"></script>
+    <script src="https://unpkg.com/swagger-ui-dist@4.15.5/swagger-ui-standalone-preset.js"></script>
+    <script>
+        window.onload = function() {
+            // Enhanced Swagger UI Configuration
+            const ui = SwaggerUIBundle({
+                url: '{{ schema_url }}',
+                dom_id: '#swagger-ui',
+                deepLinking: {{ swagger_settings.deepLinking|yesno:"true,false" }},
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                plugins: [
+                    SwaggerUIBundle.plugins.DownloadUrl
+                ],
+                layout: "StandaloneLayout",
+                
+                // Enhanced Configuration
+                displayOperationId: {{ swagger_settings.displayOperationId|yesno:"true,false" }},
+                displayRequestDuration: {{ swagger_settings.displayRequestDuration|yesno:"true,false" }},
+                defaultModelsExpandDepth: {{ swagger_settings.defaultModelsExpandDepth }},
+                defaultModelExpandDepth: {{ swagger_settings.defaultModelExpandDepth }},
+                filter: {{ swagger_settings.filter|yesno:"true,false" }},
+                showExtensions: {{ swagger_settings.showExtensions|yesno:"true,false" }},
+                showCommonExtensions: {{ swagger_settings.showCommonExtensions|yesno:"true,false" }},
+                tryItOutEnabled: {{ swagger_settings.tryItOutEnabled|yesno:"true,false" }},
+                persistAuthorization: {{ swagger_settings.persistAuthorization|yesno:"true,false" }},
+                
+                // Request Snippets Configuration
+                requestSnippetsEnabled: {{ swagger_settings.requestSnippetsEnabled|yesno:"true,false" }},
+                requestSnippets: {
+                    generators: {
+                        curl_bash: {
+                            title: "cURL (bash)",
+                            syntax: "bash"
+                        },
+                        curl_powershell: {
+                            title: "cURL (PowerShell)",
+                            syntax: "powershell"
+                        },
+                        curl_cmd: {
+                            title: "cURL (CMD)",
+                            syntax: "bash"
+                        }
+                    },
+                    defaultExpanded: true,
+                    languages: ["curl_bash", "curl_powershell", "curl_cmd"]
+                },
+                
+                // OAuth Configuration
+                oauth: {
+                    clientId: "{{ swagger_settings.oauth.clientId }}",
+                    clientSecret: "{{ swagger_settings.oauth.clientSecret }}",
+                    realm: "{{ swagger_settings.oauth.realm }}",
+                    appName: "{{ swagger_settings.oauth.appName }}",
+                    scopeSeparator: "{{ swagger_settings.oauth.scopeSeparator }}",
+                    additionalQueryStringParams: {},
+                    useBasicAuthenticationWithAccessCodeGrant: {{ swagger_settings.oauth.useBasicAuthenticationWithAccessCodeGrant|yesno:"true,false" }},
+                    usePkceWithAuthorizationCodeGrant: {{ swagger_settings.oauth.usePkceWithAuthorizationCodeGrant|yesno:"true,false" }}
+                },
+                
+                // Custom request interceptor
+                requestInterceptor: function(request) {
+                    // Add custom HDFC headers
+                    request.headers['X-API-Client'] = 'HDFC-Swagger-UI';
+                    request.headers['X-API-Version'] = '1.0.0';
+                    request.headers['X-Request-ID'] = 'req_' + Date.now();
+                    
+                    // Add correlation ID for tracking
+                    request.headers['X-Correlation-ID'] = 'corr_' + Math.random().toString(36).substr(2, 9);
+                    
+                    return request;
+                },
+                
+                // Custom response interceptor
+                responseInterceptor: function(response) {
+                    // Log response for debugging
+                    console.log('API Response:', response);
+                    
+                    // Add custom handling for HDFC-specific response codes
+                    if (response.status === 429) {
+                        // Rate limiting notification
+                        showNotification('Rate limit exceeded. Please wait before making more requests.', 'warning');
+                    } else if (response.status === 401) {
+                        // Authentication notification
+                        showNotification('Authentication required. Please check your token.', 'error');
+                    }
+                    
+                    return response;
+                },
+                
+                // Server selection
+                servers: [
+                    {% for server in servers %}
+                    {
+                        url: "{{ server.url }}",
+                        description: "{{ server.description }}"
+                    }{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                
+                // Custom validation
+                validatorUrl: null,
+                
+                // Security definitions
+                securityDefinitions: {
+                    FirebaseAuth: {
+                        type: "http",
+                        scheme: "bearer",
+                        bearerFormat: "JWT",
+                        description: "Firebase JWT token authentication"
+                    },
+                    ApiKeyAuth: {
+                        type: "apiKey",
+                        in: "header",
+                        name: "X-API-Key",
+                        description: "API key for server-to-server authentication"
+                    }
+                }
+            });
+            
+            // Custom notification function
+            window.showNotification = function(message, type) {
+                const notification = document.createElement('div');
+                notification.className = `alert alert-${type}`;
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 70px;
+                    right: 20px;
+                    z-index: 10000;
+                    padding: 10px 15px;
+                    border-radius: 4px;
+                    background: ${type === 'error' ? '#f8d7da' : type === 'warning' ? '#fff3cd' : '#d4edda'};
+                    color: ${type === 'error' ? '#721c24' : type === 'warning' ? '#856404' : '#155724'};
+                    border: 1px solid ${type === 'error' ? '#f5c6cb' : type === 'warning' ? '#ffeaa7' : '#c3e6cb'};
+                    max-width: 300px;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                `;
+                notification.textContent = message;
+                document.body.appendChild(notification);
+                
+                // Auto-remove after 5 seconds
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 5000);
+            };
+            
+            // Add authentication helper after UI loads
+            setTimeout(function() {
+                addAuthenticationHelper();
+                addQuickStartGuide();
+            }, 2000);
+            
+            window.ui = ui;
+        };
+        
+        // Authentication helper function
+        function addAuthenticationHelper() {
+            const authWrapper = document.querySelector('.auth-wrapper');
+            if (authWrapper && !document.querySelector('.auth-helper')) {
+                const helper = document.createElement('div');
+                helper.className = 'auth-helper';
+                helper.innerHTML = `
+                    <div class="api-auth-section">
+                        <h3>🔐 Authentication Guide</h3>
+                        <div class="auth-instructions">
+                            <p><strong>For Testing (Development):</strong></p>
+                            <ol>
+                                <li>Click the "Authorize" button above</li>
+                                <li>In the FirebaseAuth field, enter: <code>Bearer mock_valid_token</code></li>
+                                <li>Click "Authorize" to apply the test token</li>
+                                <li>You can now test authenticated endpoints</li>
+                            </ol>
+                            
+                            <p><strong>For Production:</strong></p>
+                            <ol>
+                                <li>Obtain a Firebase JWT token from the login endpoint</li>
+                                <li>Use the token format: <code>Bearer YOUR_ACTUAL_JWT_TOKEN</code></li>
+                                <li>Token expires in 1 hour and needs to be refreshed</li>
+                            </ol>
+                            
+                            <p><strong>Available Test Endpoints:</strong></p>
+                            <ul>
+                                <li><code>POST /api/v1/auth/test-token/</code> - Test your token validity</li>
+                                <li><code>GET /api/v1/health/</code> - Check API health (no auth required)</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+                authWrapper.parentNode.insertBefore(helper, authWrapper.nextSibling);
+            }
+        }
+        
+        // Quick start guide
+        function addQuickStartGuide() {
+            const infoSection = document.querySelector('.info');
+            if (infoSection && !document.querySelector('.quick-start')) {
+                const guide = document.createElement('div');
+                guide.className = 'quick-start';
+                guide.innerHTML = `
+                    <div class="api-auth-section">
+                        <h3>🚀 Quick Start Guide</h3>
+                        <div class="auth-instructions">
+                            <p><strong>Popular API Endpoints to Try:</strong></p>
+                            <ol>
+                                <li><strong>Health Check:</strong> <code>GET /api/v1/health/</code> - No authentication required</li>
+                                <li><strong>Customer Registration:</strong> <code>POST /api/v1/customers/register/</code> - Create new customer</li>
+                                <li><strong>Customer Login:</strong> <code>POST /api/v1/auth/login/</code> - Authenticate customer</li>
+                                <li><strong>Create Limit Request:</strong> <code>POST /api/v1/requests/</code> - Submit limit increase request</li>
+                                <li><strong>Generate OTP:</strong> <code>POST /api/v1/otp/generate/</code> - Send OTP for verification</li>
+                            </ol>
+                            
+                            <p><strong>Response Format:</strong></p>
+                            <p>All responses follow a consistent format with <code>success</code>, <code>data</code>, <code>message</code>, and <code>request_id</code> fields.</p>
+                            
+                            <p><strong>Rate Limits:</strong></p>
+                            <ul>
+                                <li>Authentication: 5 attempts per 15 minutes</li>
+                                <li>OTP requests: 3 requests per 5 minutes</li>
+                                <li>General API: 1000 requests per hour</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+                infoSection.appendChild(guide);
+            }
+        }
+    </script>
+    
+    <style>
+        /* HDFC Custom Styling */
+        {{ css_content|safe }}
+    </style>
+    
+    <script>
+        // Custom JavaScript functionality
+        {{ js_content|safe }}
+    </script>
+</body>
+</html>

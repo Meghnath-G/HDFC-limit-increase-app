@@ -1,0 +1,642 @@
+openapi: 3.0.3
+info:
+  title: Card Limit Increase System API
+  description: RESTful API for bank customers to request card and netbanking limit increases
+  version: 1.0.0
+  contact:
+    name: HDFC Tech Team
+    email: tech@hdfc.bank
+  license:
+    name: Proprietary
+servers:
+  - url: https://api.hdfc-limits.com/api/v1
+    description: Production server
+  - url: https://staging-api.hdfc-limits.com/api/v1
+    description: Staging server
+
+components:
+  securitySchemes:
+    FirebaseAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Firebase JWT token
+
+  schemas:
+    ApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+        message:
+          type: string
+        request_id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationError'
+
+    ValidationError:
+      type: object
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+
+    Customer:
+      type: object
+      properties:
+        customer_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        date_of_birth:
+          type: string
+          format: date
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          pattern: '^\+91[0-9]{10}$'
+        created_at:
+          type: string
+          format: date-time
+        is_active:
+          type: boolean
+
+    CardDetail:
+      type: object
+      properties:
+        card_id:
+          type: string
+          format: uuid
+        card_type:
+          type: string
+          enum: [credit, debit]
+        last4:
+          type: string
+          pattern: '^[0-9]{4}$'
+        expiry_month:
+          type: integer
+          minimum: 1
+          maximum: 12
+        expiry_year:
+          type: integer
+          minimum: 2025
+          maximum: 2035
+        current_limit:
+          type: number
+          format: decimal
+          minimum: 0
+        is_active:
+          type: boolean
+
+    LimitRequest:
+      type: object
+      properties:
+        request_id:
+          type: string
+          format: uuid
+        reference_number:
+          type: string
+          pattern: '^REQ-[0-9]{8}-[0-9]{4}$'
+        request_type:
+          type: string
+          enum: [credit_card, debit_card, netbanking]
+        current_limit:
+          type: number
+          format: decimal
+        requested_limit:
+          type: number
+          format: decimal
+          minimum: 1000
+          maximum: 1000000
+        status:
+          type: string
+          enum: [pending, under_review, approved, rejected, expired]
+        submitted_at:
+          type: string
+          format: date-time
+        processed_at:
+          type: string
+          format: date-time
+          nullable: true
+        expires_at:
+          type: string
+          format: date-time
+        notes:
+          type: string
+          nullable: true
+
+    OTPLog:
+      type: object
+      properties:
+        otp_id:
+          type: string
+          format: uuid
+        sent_to:
+          type: string
+        channel:
+          type: string
+          enum: [sms, email, voice]
+        expires_at:
+          type: string
+          format: date-time
+        attempts_remaining:
+          type: integer
+          minimum: 0
+          maximum: 3
+
+paths:
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register new customer
+      description: Register a new customer with Firebase integration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - firebase_token
+                - name
+                - date_of_birth
+                - email
+                - phone
+              properties:
+                firebase_token:
+                  type: string
+                name:
+                  type: string
+                  minLength: 2
+                  maxLength: 100
+                date_of_birth:
+                  type: string
+                  format: date
+                email:
+                  type: string
+                  format: email
+                phone:
+                  type: string
+                  pattern: '^\+91[0-9]{10}$'
+      responses:
+        '201':
+          description: Customer registered successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Customer'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Validate Firebase token
+      description: Validate Firebase token and get customer profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - firebase_token
+              properties:
+                firebase_token:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Customer'
+
+  /customers/profile:
+    get:
+      tags:
+        - Customer Management
+      summary: Get customer profile
+      description: Get customer profile information with card details
+      security:
+        - FirebaseAuth: []
+      responses:
+        '200':
+          description: Profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        allOf:
+                          - $ref: '#/components/schemas/Customer'
+                          - type: object
+                            properties:
+                              card_details:
+                                type: array
+                                items:
+                                  $ref: '#/components/schemas/CardDetail'
+
+    put:
+      tags:
+        - Customer Management
+      summary: Update customer profile
+      description: Update customer profile information
+      security:
+        - FirebaseAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 2
+                  maxLength: 100
+                email:
+                  type: string
+                  format: email
+                phone:
+                  type: string
+                  pattern: '^\+91[0-9]{10}$'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Customer'
+
+  /requests/submit:
+    post:
+      tags:
+        - Limit Requests
+      summary: Submit limit increase request
+      description: Submit new limit increase request for card or netbanking
+      security:
+        - FirebaseAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  title: Card Request
+                  required:
+                    - request_type
+                    - card_details
+                    - requested_limit
+                  properties:
+                    request_type:
+                      type: string
+                      enum: [credit_card, debit_card]
+                    card_details:
+                      type: object
+                      required:
+                        - last4
+                        - expiry_month
+                        - expiry_year
+                      properties:
+                        last4:
+                          type: string
+                          pattern: '^[0-9]{4}$'
+                        expiry_month:
+                          type: integer
+                          minimum: 1
+                          maximum: 12
+                        expiry_year:
+                          type: integer
+                          minimum: 2025
+                    requested_limit:
+                      type: number
+                      minimum: 1000
+                      maximum: 1000000
+                - type: object
+                  title: NetBanking Request
+                  required:
+                    - request_type
+                    - netbanking_details
+                    - requested_limit
+                  properties:
+                    request_type:
+                      type: string
+                      enum: [netbanking]
+                    netbanking_details:
+                      type: object
+                      required:
+                        - customer_id
+                        - password
+                      properties:
+                        customer_id:
+                          type: string
+                        password:
+                          type: string
+                    requested_limit:
+                      type: number
+                      minimum: 1000
+                      maximum: 1000000
+      responses:
+        '201':
+          description: Request submitted successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LimitRequest'
+
+  /requests/history:
+    get:
+      tags:
+        - Limit Requests
+      summary: Get request history
+      description: Get customer's limit request history with pagination
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, under_review, approved, rejected, expired]
+      responses:
+        '200':
+          description: Request history retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          requests:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/LimitRequest'
+                          pagination:
+                            type: object
+                            properties:
+                              current_page:
+                                type: integer
+                              total_pages:
+                                type: integer
+                              total_items:
+                                type: integer
+                              has_next:
+                                type: boolean
+                              has_previous:
+                                type: boolean
+
+  /requests/status/{request_id}:
+    get:
+      tags:
+        - Limit Requests
+      summary: Get request status
+      description: Get specific request status and details
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - name: request_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Request status retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LimitRequest'
+
+  /otp/send:
+    post:
+      tags:
+        - OTP Management
+      summary: Send OTP
+      description: Generate and send OTP for verification
+      security:
+        - FirebaseAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - purpose
+                - channel
+              properties:
+                purpose:
+                  type: string
+                  enum: [registration, login, request_verification]
+                channel:
+                  type: string
+                  enum: [sms, email]
+                limit_request_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: OTP sent successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/OTPLog'
+
+  /otp/verify:
+    post:
+      tags:
+        - OTP Management
+      summary: Verify OTP
+      description: Verify OTP code
+      security:
+        - FirebaseAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - otp_id
+                - otp_code
+              properties:
+                otp_id:
+                  type: string
+                  format: uuid
+                otp_code:
+                  type: string
+                  pattern: '^[0-9]{6}$'
+                limit_request_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: OTP verified successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          verified:
+                            type: boolean
+                          verified_at:
+                            type: string
+                            format: date-time
+                          limit_request_id:
+                            type: string
+                            format: uuid
+
+  /notifications/send:
+    post:
+      tags:
+        - Notifications
+      summary: Send push notification
+      description: Send push notification to customer (Internal use)
+      security:
+        - FirebaseAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - customer_id
+                - notification_type
+                - title
+                - message
+              properties:
+                customer_id:
+                  type: string
+                  format: uuid
+                notification_type:
+                  type: string
+                  enum: [status_update, otp_sent, login_alert]
+                title:
+                  type: string
+                  maxLength: 100
+                message:
+                  type: string
+                  maxLength: 500
+                data:
+                  type: object
+                  properties:
+                    limit_request_id:
+                      type: string
+                      format: uuid
+                    action:
+                      type: string
+      responses:
+        '200':
+          description: Notification sent successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          notification_id:
+                            type: string
+                            format: uuid
+                          onesignal_id:
+                            type: string
+                          delivery_status:
+                            type: string
+                            enum: [sent, delivered, failed]
+                          sent_at:
+                            type: string
+                            format: date-time
+
+tags:
+  - name: Authentication
+    description: User registration and login endpoints
+  - name: Customer Management
+    description: Customer profile management
+  - name: Limit Requests
+    description: Limit increase request operations
+  - name: OTP Management
+    description: OTP generation and verification
+  - name: Notifications
+    description: Push notification management

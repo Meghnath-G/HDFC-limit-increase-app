@@ -1,0 +1,33 @@
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "card_limit_system.test_settings"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+python_classes = ["Test*", "*Test", "*Tests"]
+python_functions = ["test_*"]
+testpaths = ["tests"]
+addopts = [
+    "--verbose",
+    "--tb=short",
+    "--strict-markers",
+    "--strict-config",
+    "--cov=.",
+    "--cov-report=html",
+    "--cov-report=term-missing",
+    "--cov-fail-under=85",
+    "--reuse-db",
+    "--nomigrations",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "api: marks tests as API tests",
+    "external_service: marks tests that require external services",
+    "business_logic: marks tests for business logic",
+    "security: marks tests for security features",
+    "performance: marks tests for performance",
+]
+filterwarnings = [
+    "ignore::UserWarning",
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
